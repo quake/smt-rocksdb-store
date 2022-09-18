@@ -1,0 +1,76 @@
+use std::marker::PhantomData;
+
+use rocksdb::prelude::*;
+use sparse_merkle_tree::{
+    error::Error,
+    traits::{StoreReadOps, StoreWriteOps, Value},
+    tree::{BranchKey, BranchNode},
+    H256,
+};
+
+use crate::serde::{branch_key_to_vec, branch_node_to_vec, slice_to_branch_node};
+
+/// A SMT `Store` implementation backed by a RocksDB database, using the default column family.
+pub struct DefaultStore<'a, T, W> {
+    inner: &'a T,
+    write_options: PhantomData<W>,
+}
+
+impl<'a, T, W> DefaultStore<'a, T, W> {
+    pub fn new(db: &'a T) -> Self {
+        DefaultStore {
+            inner: db,
+            write_options: PhantomData,
+        }
+    }
+}
+
+impl<'a, V, T, W> StoreReadOps<V> for DefaultStore<'a, T, W>
+where
+    V: Value + AsRef<[u8]> + From<DBVector>,
+    T: Get<ReadOptions>,
+{
+    fn get_branch(&self, branch_key: &BranchKey) -> Result<Option<BranchNode>, Error> {
+        self.inner
+            .get(&branch_key_to_vec(branch_key))
+            .map(|s| s.map(|v| slice_to_branch_node(&v)))
+            .map_err(|e| Error::Store(e.to_string()))
+    }
+
+    fn get_leaf(&self, leaf_key: &H256) -> Result<Option<V>, Error> {
+        self.inner
+            .get(leaf_key.as_slice())
+            .map(|s| s.map(|v| v.into()))
+            .map_err(|e| Error::Store(e.to_string()))
+    }
+}
+
+impl<'a, V, T, W> StoreWriteOps<V> for DefaultStore<'a, T, W>
+where
+    V: Value + AsRef<[u8]> + From<DBVector>,
+    T: Delete<W> + Put<W>,
+{
+    fn insert_branch(&mut self, node_key: BranchKey, branch: BranchNode) -> Result<(), Error> {
+        self.inner
+            .put(&branch_key_to_vec(&node_key), &branch_node_to_vec(&branch))
+            .map_err(|e| Error::Store(e.to_string()))
+    }
+
+    fn insert_leaf(&mut self, leaf_key: H256, leaf: V) -> Result<(), Error> {
+        self.inner
+            .put(leaf_key.as_slice(), leaf)
+            .map_err(|e| Error::Store(e.to_string()))
+    }
+
+    fn remove_branch(&mut self, node_key: &BranchKey) -> Result<(), Error> {
+        self.inner
+            .delete(&branch_key_to_vec(node_key))
+            .map_err(|e| Error::Store(e.to_string()))
+    }
+
+    fn remove_leaf(&mut self, leaf_key: &H256) -> Result<(), Error> {
+        self.inner
+            .delete(leaf_key.as_slice())
+            .map_err(|e| Error::Store(e.to_string()))
+    }
+}
