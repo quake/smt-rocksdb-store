@@ -7,8 +7,14 @@ edition = "2021"
 
 [dependencies]
 rocksdb = { package = "ckb-rocksdb", version = "0.18", default-features = false, features = ["snappy", "march-native"] }
-sparse-merkle-tree = { git = "https://github.com/nervosnetwork/sparse-merkle-tree", branch = "quake/split-store-trait" }
+sparse-merkle-tree = { git = "https://github.com/nervosnetwork/sparse-merkle-tree", branch = "master" }
 
 [dev-dependencies]
 blake2b-rs = "0.2"
 tempfile = "3.0"
+criterion = "0.4"
+rand = "0.8"
+
+[[bench]]
+name = "bench_main"
+harness = false

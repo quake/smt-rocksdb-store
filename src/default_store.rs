@@ -12,7 +12,9 @@ use crate::serde::{branch_key_to_vec, branch_node_to_vec, slice_to_branch_node};
 
 /// A SMT `Store` implementation backed by a RocksDB database, using the default column family.
 pub struct DefaultStore<'a, T, W> {
+    // The RocksDB database which stores the data, can be a `DB` / `OptimisticTransactionDB` / `Snapshot` etc.
     inner: &'a T,
+    // A generic write options, can be a `WriteOptions` / `()` etc.
     write_options: PhantomData<W>,
 }
 
