@@ -10,10 +10,20 @@ rocksdb = { package = "ckb-rocksdb", version = "0.18", default-features = false,
 sparse-merkle-tree = { git = "https://github.com/nervosnetwork/sparse-merkle-tree", branch = "master" }
 
 [dev-dependencies]
+# for benchmarks
 blake2b-rs = "0.2"
 tempfile = "3.0"
 criterion = "0.4"
 rand = "0.8"
+
+# for examples
+anyhow = "1"
+futures = "0.3"
+jsonrpsee = { version = "0.15", features = ["full"] }
+tokio = { version = "1.16", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_with = { version = "2.0", features = ["hex"] }
 
 [[bench]]
 name = "bench_main"
