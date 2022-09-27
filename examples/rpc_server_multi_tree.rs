@@ -9,7 +9,7 @@ use rocksdb::prelude::{GetPinned, Open, Put};
 use rocksdb::{DBVector, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use smt_rocksdb_store::default_store::{DefaultStore, DefaultStoreMultiTree};
+use smt_rocksdb_store::default_store::DefaultStoreMultiTree;
 use sparse_merkle_tree::blake2b::Blake2bHasher;
 use sparse_merkle_tree::traits::Value;
 use sparse_merkle_tree::{SparseMerkleTree, H256};
