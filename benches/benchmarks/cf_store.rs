@@ -6,7 +6,8 @@ use rocksdb::{
 };
 
 use smt_rocksdb_store::cf_store::{ColumnFamilyStore, ColumnFamilyStoreMultiTree};
-use sparse_merkle_tree::{blake2b::Blake2bHasher, tree::SparseMerkleTree, H256};
+use sparse_merkle_tree::{blake2b::Blake2bHasher, SparseMerkleTree, H256};
+use tempfile::{Builder, TempDir};
 
 use super::{random_kvs, V};
 
@@ -16,19 +17,23 @@ type ColumnFamilyStoreSMT<'a, T, W> =
 type ColumnFamilyStoreMultiSMT<'a, T, W> =
     SparseMerkleTree<Blake2bHasher, V, ColumnFamilyStoreMultiTree<'a, T, W>>;
 
-fn open_db() -> OptimisticTransactionDB {
-    let tmp_dir = tempfile::Builder::new().tempdir().unwrap();
+// return temp dir also to make sure it's not dropped automatically
+fn open_db() -> (OptimisticTransactionDB, TempDir) {
+    let tmp_dir = Builder::new().tempdir().unwrap();
     let mut options = Options::default();
     options.create_if_missing(true);
     options.create_missing_column_families(true);
-    OptimisticTransactionDB::open_cf(&options, tmp_dir.path(), vec!["cf1", "cf2"]).unwrap()
+    (
+        OptimisticTransactionDB::open_cf(&options, tmp_dir.path(), vec!["cf1", "cf2"]).unwrap(),
+        tmp_dir,
+    )
 }
 
 fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cf_smt_update");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let branch_col = db.cf_handle("cf1").unwrap();
             let leaf_col = db.cf_handle("cf2").unwrap();
             b.iter(|| {
@@ -48,7 +53,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cf_smt_update_all");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let branch_col = db.cf_handle("cf1").unwrap();
             let leaf_col = db.cf_handle("cf2").unwrap();
             b.iter(|| {
@@ -66,7 +71,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cf_smt_generate_proof");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let branch_col = db.cf_handle("cf1").unwrap();
             let leaf_col = db.cf_handle("cf2").unwrap();
             let tx = db.transaction_default();
@@ -98,7 +103,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cf_smt_multi_tree_update");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let branch_col = db.cf_handle("cf1").unwrap();
             let leaf_col = db.cf_handle("cf2").unwrap();
             b.iter(|| {
@@ -119,7 +124,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cf_smt_multi_tree_update_all");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let branch_col = db.cf_handle("cf1").unwrap();
             let leaf_col = db.cf_handle("cf2").unwrap();
             b.iter(|| {
@@ -138,7 +143,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cf_smt_multi_tree_generate_proof");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let branch_col = db.cf_handle("cf1").unwrap();
             let leaf_col = db.cf_handle("cf2").unwrap();
             let tx = db.transaction_default();

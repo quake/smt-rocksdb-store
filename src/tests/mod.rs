@@ -1,7 +1,8 @@
 use blake2b_rs::{Blake2b, Blake2bBuilder};
 use rocksdb::DBVector;
 use sparse_merkle_tree::{
-    blake2b::Blake2bHasher, default_store::DefaultStore, traits::Value, SparseMerkleTree, H256,
+    blake2b::Blake2bHasher, default_store::DefaultStore, traits::Value,
+    SparseMerkleTree, H256,
 };
 
 mod cf_store;

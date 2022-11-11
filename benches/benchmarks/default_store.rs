@@ -3,7 +3,8 @@ use rand::{seq::IteratorRandom, thread_rng};
 use rocksdb::{prelude::Open, OptimisticTransactionDB};
 
 use smt_rocksdb_store::default_store::{DefaultStore, DefaultStoreMultiTree};
-use sparse_merkle_tree::{blake2b::Blake2bHasher, tree::SparseMerkleTree, H256};
+use sparse_merkle_tree::{blake2b::Blake2bHasher, SparseMerkleTree, H256};
+use tempfile::{Builder, TempDir};
 
 use super::{random_kvs, V};
 
@@ -11,16 +12,20 @@ type DefaultStoreSMT<'a, T, W> = SparseMerkleTree<Blake2bHasher, V, DefaultStore
 type DefaultStoreMultiSMT<'a, T, W> =
     SparseMerkleTree<Blake2bHasher, V, DefaultStoreMultiTree<'a, T, W>>;
 
-fn open_db() -> OptimisticTransactionDB {
-    let tmp_dir = tempfile::Builder::new().tempdir().unwrap();
-    OptimisticTransactionDB::open_default(tmp_dir.path()).unwrap()
+// return temp dir also to make sure it's not dropped automatically
+fn open_db() -> (OptimisticTransactionDB, TempDir) {
+    let tmp_dir = Builder::new().tempdir().unwrap();
+    (
+        OptimisticTransactionDB::open_default(tmp_dir.path()).unwrap(),
+        tmp_dir,
+    )
 }
 
 fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("default_smt_update");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             b.iter(|| {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStore::new(&tx);
@@ -37,7 +42,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("default_smt_update_all");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             b.iter(|| {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStore::new(&tx);
@@ -52,7 +57,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("default_smt_generate_proof");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let tx = db.transaction_default();
             let rocksdb_store = DefaultStore::new(&tx);
             let mut rocksdb_store_smt = DefaultStoreSMT::new(H256::default(), rocksdb_store);
@@ -81,7 +86,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("default_multi_tree_smt_update");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             b.iter(|| {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStoreMultiTree::new(b"tree1", &tx);
@@ -99,7 +104,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("default_multi_tree_smt_update_all");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             b.iter(|| {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStoreMultiTree::new(b"tree1", &tx);
@@ -115,7 +120,7 @@ fn benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("default_multi_tree__smt_generate_proof");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
-            let db = open_db();
+            let (db, _tmp_dir) = open_db();
             let tx = db.transaction_default();
             let rocksdb_store = DefaultStoreMultiTree::new(b"tree1", &tx);
             let mut rocksdb_store_smt = DefaultStoreMultiSMT::new(H256::default(), rocksdb_store);
