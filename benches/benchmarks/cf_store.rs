@@ -6,7 +6,7 @@ use rocksdb::{
 };
 
 use smt_rocksdb_store::cf_store::{ColumnFamilyStore, ColumnFamilyStoreMultiTree};
-use sparse_merkle_tree::{blake2b::Blake2bHasher, SparseMerkleTree, H256};
+use sparse_merkle_tree::{blake2b::Blake2bHasher, SparseMerkleTree};
 use tempfile::{Builder, TempDir};
 
 use super::{random_kvs, V};
@@ -40,7 +40,7 @@ fn benchmark(c: &mut Criterion) {
                 let tx = db.transaction_default();
                 let rocksdb_store = ColumnFamilyStore::new(&tx, branch_col, leaf_col);
                 let mut rocksdb_store_smt =
-                    ColumnFamilyStoreSMT::new(H256::default(), rocksdb_store);
+                    ColumnFamilyStoreSMT::new_with_store(rocksdb_store).unwrap();
                 for (key, value) in random_kvs(count) {
                     rocksdb_store_smt.update(key, value).unwrap();
                 }
@@ -60,7 +60,7 @@ fn benchmark(c: &mut Criterion) {
                 let tx = db.transaction_default();
                 let rocksdb_store = ColumnFamilyStore::new(&tx, branch_col, leaf_col);
                 let mut rocksdb_store_smt =
-                    ColumnFamilyStoreSMT::new(H256::default(), rocksdb_store);
+                    ColumnFamilyStoreSMT::new_with_store(rocksdb_store).unwrap();
                 rocksdb_store_smt.update_all(random_kvs(count)).unwrap();
                 tx.commit().unwrap();
             })
@@ -76,7 +76,8 @@ fn benchmark(c: &mut Criterion) {
             let leaf_col = db.cf_handle("cf2").unwrap();
             let tx = db.transaction_default();
             let rocksdb_store = ColumnFamilyStore::new(&tx, branch_col, leaf_col);
-            let mut rocksdb_store_smt = ColumnFamilyStoreSMT::new(H256::default(), rocksdb_store);
+            let mut rocksdb_store_smt =
+                ColumnFamilyStoreSMT::new_with_store(rocksdb_store).unwrap();
             let kvs = random_kvs(count);
             rocksdb_store_smt.update_all(kvs.clone()).unwrap();
             let root = rocksdb_store_smt.root().clone();
@@ -111,7 +112,7 @@ fn benchmark(c: &mut Criterion) {
                 let rocksdb_store =
                     ColumnFamilyStoreMultiTree::new(b"tree1", &tx, branch_col, leaf_col);
                 let mut rocksdb_store_smt =
-                    ColumnFamilyStoreMultiSMT::new(H256::default(), rocksdb_store);
+                    ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store).unwrap();
                 for (key, value) in random_kvs(count) {
                     rocksdb_store_smt.update(key, value).unwrap();
                 }
@@ -132,7 +133,7 @@ fn benchmark(c: &mut Criterion) {
                 let rocksdb_store =
                     ColumnFamilyStoreMultiTree::new(b"tree1", &tx, branch_col, leaf_col);
                 let mut rocksdb_store_smt =
-                    ColumnFamilyStoreMultiSMT::new(H256::default(), rocksdb_store);
+                    ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store).unwrap();
                 rocksdb_store_smt.update_all(random_kvs(count)).unwrap();
                 tx.commit().unwrap();
             })
@@ -150,7 +151,7 @@ fn benchmark(c: &mut Criterion) {
             let rocksdb_store =
                 ColumnFamilyStoreMultiTree::new(b"tree1", &tx, branch_col, leaf_col);
             let mut rocksdb_store_smt =
-                ColumnFamilyStoreMultiSMT::new(H256::default(), rocksdb_store);
+                ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store).unwrap();
             let kvs = random_kvs(count);
             rocksdb_store_smt.update_all(kvs.clone()).unwrap();
             let root = rocksdb_store_smt.root().clone();

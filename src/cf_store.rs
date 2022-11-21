@@ -4,8 +4,7 @@ use rocksdb::prelude::*;
 use sparse_merkle_tree::{
     error::Error,
     traits::{StoreReadOps, StoreWriteOps, Value},
-    tree::{BranchKey, BranchNode},
-    H256,
+    BranchKey, BranchNode, H256,
 };
 
 use crate::serde::{branch_key_to_vec, branch_node_to_vec, slice_to_branch_node};
@@ -166,7 +165,7 @@ where
         self.inner
             .delete_cf(
                 self.branch_col,
-                &[self.prefix, &branch_key_to_vec(&node_key)].concat(),
+                &[self.prefix, &branch_key_to_vec(node_key)].concat(),
             )
             .map_err(|e| Error::Store(e.to_string()))
     }

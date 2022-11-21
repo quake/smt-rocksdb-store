@@ -3,7 +3,7 @@ use rand::{seq::IteratorRandom, thread_rng};
 use rocksdb::{prelude::Open, OptimisticTransactionDB};
 
 use smt_rocksdb_store::default_store::{DefaultStore, DefaultStoreMultiTree};
-use sparse_merkle_tree::{blake2b::Blake2bHasher, SparseMerkleTree, H256};
+use sparse_merkle_tree::{blake2b::Blake2bHasher, SparseMerkleTree};
 use tempfile::{Builder, TempDir};
 
 use super::{random_kvs, V};
@@ -29,7 +29,7 @@ fn benchmark(c: &mut Criterion) {
             b.iter(|| {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStore::new(&tx);
-                let mut rocksdb_store_smt = DefaultStoreSMT::new(H256::default(), rocksdb_store);
+                let mut rocksdb_store_smt = DefaultStoreSMT::new_with_store(rocksdb_store).unwrap();
                 for (key, value) in random_kvs(count) {
                     rocksdb_store_smt.update(key, value).unwrap();
                 }
@@ -46,7 +46,7 @@ fn benchmark(c: &mut Criterion) {
             b.iter(|| {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStore::new(&tx);
-                let mut rocksdb_store_smt = DefaultStoreSMT::new(H256::default(), rocksdb_store);
+                let mut rocksdb_store_smt = DefaultStoreSMT::new_with_store(rocksdb_store).unwrap();
                 rocksdb_store_smt.update_all(random_kvs(count)).unwrap();
                 tx.commit().unwrap();
             })
@@ -60,7 +60,7 @@ fn benchmark(c: &mut Criterion) {
             let (db, _tmp_dir) = open_db();
             let tx = db.transaction_default();
             let rocksdb_store = DefaultStore::new(&tx);
-            let mut rocksdb_store_smt = DefaultStoreSMT::new(H256::default(), rocksdb_store);
+            let mut rocksdb_store_smt = DefaultStoreSMT::new_with_store(rocksdb_store).unwrap();
             let kvs = random_kvs(count);
             rocksdb_store_smt.update_all(kvs.clone()).unwrap();
             let root = rocksdb_store_smt.root().clone();
@@ -91,7 +91,7 @@ fn benchmark(c: &mut Criterion) {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStoreMultiTree::new(b"tree1", &tx);
                 let mut rocksdb_store_smt =
-                    DefaultStoreMultiSMT::new(H256::default(), rocksdb_store);
+                    DefaultStoreMultiSMT::new_with_store(rocksdb_store).unwrap();
                 for (key, value) in random_kvs(count) {
                     rocksdb_store_smt.update(key, value).unwrap();
                 }
@@ -109,7 +109,7 @@ fn benchmark(c: &mut Criterion) {
                 let tx = db.transaction_default();
                 let rocksdb_store = DefaultStoreMultiTree::new(b"tree1", &tx);
                 let mut rocksdb_store_smt =
-                    DefaultStoreMultiSMT::new(H256::default(), rocksdb_store);
+                    DefaultStoreMultiSMT::new_with_store(rocksdb_store).unwrap();
                 rocksdb_store_smt.update_all(random_kvs(count)).unwrap();
                 tx.commit().unwrap();
             })
@@ -117,13 +117,14 @@ fn benchmark(c: &mut Criterion) {
     }
     group.finish();
 
-    let mut group = c.benchmark_group("default_multi_tree__smt_generate_proof");
+    let mut group = c.benchmark_group("default_multi_tree_smt_generate_proof");
     for count in [100, 500, 1000] {
         group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, &count| {
             let (db, _tmp_dir) = open_db();
             let tx = db.transaction_default();
             let rocksdb_store = DefaultStoreMultiTree::new(b"tree1", &tx);
-            let mut rocksdb_store_smt = DefaultStoreMultiSMT::new(H256::default(), rocksdb_store);
+            let mut rocksdb_store_smt =
+                DefaultStoreMultiSMT::new_with_store(rocksdb_store).unwrap();
             let kvs = random_kvs(count);
             rocksdb_store_smt.update_all(kvs.clone()).unwrap();
             let root = rocksdb_store_smt.root().clone();

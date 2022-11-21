@@ -1,9 +1,6 @@
 use std::convert::TryInto;
 
-use sparse_merkle_tree::{
-    merge::MergeValue,
-    tree::{BranchKey, BranchNode},
-};
+use sparse_merkle_tree::{merge::MergeValue, BranchKey, BranchNode};
 
 /// Serialize a `BranchKey` into a `Vec<u8>` for use as a key in the key-value store.
 pub fn branch_key_to_vec(key: &BranchKey) -> Vec<u8> {

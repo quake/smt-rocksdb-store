@@ -27,7 +27,7 @@ fn test_store_functions() {
 
     // generate a merkle tree with a memory store
     let (root1, proof1) = {
-        let mut memory_store_smt = MemoryStoreSMT::new(H256::default(), Default::default());
+        let mut memory_store_smt = MemoryStoreSMT::new_with_store(Default::default()).unwrap();
         for (key, value) in kvs.iter() {
             memory_store_smt.update(key.clone(), value.clone()).unwrap();
         }
@@ -48,7 +48,7 @@ fn test_store_functions() {
         let branch_col = db.cf_handle("cf1").unwrap();
         let leaf_col = db.cf_handle("cf2").unwrap();
         let rocksdb_store = ColumnFamilyStore::new(&db, branch_col, leaf_col);
-        let mut rocksdb_store_smt = ColumnFamilyStoreSMT::new(H256::default(), rocksdb_store);
+        let mut rocksdb_store_smt = ColumnFamilyStoreSMT::new_with_store(rocksdb_store).unwrap();
         for (key, value) in kvs.iter() {
             rocksdb_store_smt
                 .update(key.clone(), value.clone())
@@ -80,7 +80,7 @@ fn test_store_functions() {
         let leaf_col = db.cf_handle("cf2").unwrap();
         let tx = db.transaction_default();
         let rocksdb_store = ColumnFamilyStore::new(&tx, branch_col, leaf_col);
-        let mut rocksdb_store_smt = ColumnFamilyStoreSMT::new(H256::default(), rocksdb_store);
+        let mut rocksdb_store_smt = ColumnFamilyStoreSMT::new_with_store(rocksdb_store).unwrap();
         for (key, value) in kvs.iter() {
             rocksdb_store_smt
                 .update(key.clone(), value.clone())
@@ -122,7 +122,7 @@ fn test_multi_trees_store_functions() {
 
     // generate a merkle tree with a memory store
     let (root1, proof1) = {
-        let mut memory_store_smt = MemoryStoreSMT::new(H256::default(), Default::default());
+        let mut memory_store_smt = MemoryStoreSMT::new_with_store(Default::default()).unwrap();
         for (key, value) in kvs.iter() {
             memory_store_smt.update(key.clone(), value.clone()).unwrap();
         }
@@ -145,8 +145,8 @@ fn test_multi_trees_store_functions() {
 
         let rocksdb_store1 = ColumnFamilyStoreMultiTree::new(b"tree1", &db, &branch_col, &leaf_col);
         let rocksdb_store2 = ColumnFamilyStoreMultiTree::new(b"tree2", &db, &branch_col, &leaf_col);
-        let mut smt1 = ColumnFamilyStoreMultiSMT::new(H256::default(), rocksdb_store1);
-        let mut smt2 = ColumnFamilyStoreMultiSMT::new(H256::default(), rocksdb_store2);
+        let mut smt1 = ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store1).unwrap();
+        let mut smt2 = ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store2).unwrap();
         for (key, value) in kvs.iter() {
             smt1.update(key.clone(), value.clone()).unwrap();
             smt2.update(key.clone(), value.clone()).unwrap();

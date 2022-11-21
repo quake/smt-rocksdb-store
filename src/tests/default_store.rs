@@ -23,7 +23,7 @@ fn test_store_functions() {
 
     // generate a merkle tree with a memory store
     let (root1, proof1) = {
-        let mut memory_store_smt = MemoryStoreSMT::new(H256::default(), Default::default());
+        let mut memory_store_smt = MemoryStoreSMT::new_with_store(Default::default()).unwrap();
         for (key, value) in kvs.iter() {
             memory_store_smt.update(key.clone(), value.clone()).unwrap();
         }
@@ -39,7 +39,7 @@ fn test_store_functions() {
         let tmp_dir = tempfile::Builder::new().tempdir().unwrap();
         let db = DB::open_default(tmp_dir.path()).unwrap();
         let rocksdb_store = DefaultStore::new(&db);
-        let mut rocksdb_store_smt = DefaultStoreSMT::new(H256::default(), rocksdb_store);
+        let mut rocksdb_store_smt = DefaultStoreSMT::new_with_store(rocksdb_store).unwrap();
         for (key, value) in kvs.iter() {
             rocksdb_store_smt
                 .update(key.clone(), value.clone())
@@ -63,7 +63,7 @@ fn test_store_functions() {
         let db = OptimisticTransactionDB::open_default(tmp_dir.path()).unwrap();
         let tx = db.transaction_default();
         let rocksdb_store = DefaultStore::new(&tx);
-        let mut rocksdb_store_smt = DefaultStoreSMT::new(H256::default(), rocksdb_store);
+        let mut rocksdb_store_smt = DefaultStoreSMT::new_with_store(rocksdb_store).unwrap();
         for (key, value) in kvs.iter() {
             rocksdb_store_smt
                 .update(key.clone(), value.clone())
@@ -103,7 +103,7 @@ fn test_multi_trees_store_functions() {
 
     // generate a merkle tree with a memory store
     let (root1, proof1) = {
-        let mut memory_store_smt = MemoryStoreSMT::new(H256::default(), Default::default());
+        let mut memory_store_smt = MemoryStoreSMT::new_with_store(Default::default()).unwrap();
         for (key, value) in kvs.iter() {
             memory_store_smt.update(key.clone(), value.clone()).unwrap();
         }
@@ -120,8 +120,8 @@ fn test_multi_trees_store_functions() {
         let db = DB::open_default(tmp_dir.path()).unwrap();
         let rocksdb_store1 = DefaultStoreMultiTree::new(b"tree1", &db);
         let rocksdb_store2 = DefaultStoreMultiTree::new(b"tree2", &db);
-        let mut smt1 = DefaultStoreMultiSMT::new(H256::default(), rocksdb_store1);
-        let mut smt2 = DefaultStoreMultiSMT::new(H256::default(), rocksdb_store2);
+        let mut smt1 = DefaultStoreMultiSMT::new_with_store(rocksdb_store1).unwrap();
+        let mut smt2 = DefaultStoreMultiSMT::new_with_store(rocksdb_store2).unwrap();
         for (key, value) in kvs.iter() {
             smt1.update(key.clone(), value.clone()).unwrap();
             smt2.update(key.clone(), value.clone()).unwrap();

@@ -5,8 +5,7 @@ use jsonrpsee::core::{async_trait, Error};
 use jsonrpsee::http_server::HttpServerBuilder;
 use jsonrpsee::proc_macros::rpc;
 
-use rocksdb::prelude::{GetPinned, Open, Put};
-use rocksdb::{DBVector, OptimisticTransactionDB};
+use rocksdb::{prelude::Open, DBVector, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smt_rocksdb_store::default_store::DefaultStoreMultiTree;
@@ -72,17 +71,6 @@ impl RpcServerImpl {
     fn new(db: OptimisticTransactionDB) -> Self {
         Self { db }
     }
-
-    fn get_smt_root(&self, tree: &str) -> H256 {
-        self.db
-            .get_pinned(["SMT_ROOT_", tree].concat())
-            .expect("db get error")
-            .map(|v| {
-                let result: [u8; 32] = v.to_vec().try_into().expect("slice with incorrect length");
-                result.into()
-            })
-            .unwrap_or_default()
-    }
 }
 
 #[async_trait]
@@ -90,26 +78,22 @@ impl RpcServer for RpcServerImpl {
     async fn update_all(&self, tree: &str, kvs: Vec<(SmtKey, SmtValue)>) -> Result<SmtRoot, Error> {
         let kvs: Vec<(H256, SmtValue)> = kvs.into_iter().map(|(k, v)| (k.0.into(), v)).collect();
 
-        let root = self.get_smt_root(tree);
         let tx = self.db.transaction_default();
         let mut rocksdb_store_smt =
-            DefaultStoreMultiSMT::new(root, DefaultStoreMultiTree::new(tree.as_bytes(), &tx));
+            DefaultStoreMultiSMT::new_with_store(DefaultStoreMultiTree::new(tree.as_bytes(), &tx))
+                .unwrap();
         rocksdb_store_smt.update_all(kvs).expect("update_all error");
-        let new_root = rocksdb_store_smt.root().clone();
-        tx.put(["SMT_ROOT_", tree].concat(), new_root.as_slice())
-            .expect("db put error");
         tx.commit().expect("db commit error");
-        Ok(SmtRoot(new_root.into()))
+        Ok(SmtRoot(rocksdb_store_smt.root().clone().into()))
     }
 
     async fn merkle_proof(&self, tree: &str, keys: Vec<SmtKey>) -> Result<SmtProof, Error> {
         let keys: Vec<H256> = keys.into_iter().map(|k| k.0.into()).collect();
-        let root = self.get_smt_root(tree);
         let snapshot = self.db.snapshot();
-        let rocksdb_store_smt = DefaultStoreMultiSMT::new(
-            root,
+        let rocksdb_store_smt = DefaultStoreMultiSMT::new_with_store(
             DefaultStoreMultiTree::<_, ()>::new(tree.as_bytes(), &snapshot),
-        );
+        )
+        .unwrap();
         let proof = rocksdb_store_smt
             .merkle_proof(keys.clone())
             .expect("merkle_proof error");
