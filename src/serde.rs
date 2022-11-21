@@ -74,6 +74,7 @@ pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
             ret.extend_from_slice(&[*r_zero_count]);
             ret
         }
+        #[cfg(feature = "trie")]
         (MergeValue::Value(left), MergeValue::ShortCut { key, value, height }) => {
             let mut ret = Vec::with_capacity(98);
             ret.extend_from_slice(&[4]);
@@ -83,6 +84,7 @@ pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
             ret.extend_from_slice(&[*height]);
             ret
         }
+        #[cfg(feature = "trie")]
         (MergeValue::ShortCut { key, value, height }, MergeValue::Value(right)) => {
             let mut ret = Vec::with_capacity(98);
             ret.extend_from_slice(&[5]);
@@ -92,6 +94,7 @@ pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
             ret.extend_from_slice(right.as_slice());
             ret
         }
+        #[cfg(feature = "trie")]
         (
             MergeValue::ShortCut {
                 key: l_key,
@@ -114,6 +117,7 @@ pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
             ret.extend_from_slice(&[*r_height]);
             ret
         }
+        #[cfg(feature = "trie")]
         (
             MergeValue::MergeWithZero {
                 base_node,
@@ -132,6 +136,7 @@ pub fn branch_node_to_vec(node: &BranchNode) -> Vec<u8> {
             ret.extend_from_slice(&[*height]);
             ret
         }
+        #[cfg(feature = "trie")]
         (
             MergeValue::ShortCut { key, value, height },
             MergeValue::MergeWithZero {
@@ -212,6 +217,7 @@ pub fn slice_to_branch_node(slice: &[u8]) -> BranchNode {
                 },
             }
         }
+        #[cfg(feature = "trie")]
         4 => {
             let left: [u8; 32] = slice[1..33].try_into().expect("checked slice");
             let key: [u8; 32] = slice[33..65].try_into().expect("checked slice");
@@ -226,6 +232,7 @@ pub fn slice_to_branch_node(slice: &[u8]) -> BranchNode {
                 },
             }
         }
+        #[cfg(feature = "trie")]
         5 => {
             let key: [u8; 32] = slice[1..33].try_into().expect("checked slice");
             let value: [u8; 32] = slice[33..65].try_into().expect("checked slice");
@@ -240,6 +247,7 @@ pub fn slice_to_branch_node(slice: &[u8]) -> BranchNode {
                 right: MergeValue::Value(right.into()),
             }
         }
+        #[cfg(feature = "trie")]
         6 => {
             let l_key: [u8; 32] = slice[1..33].try_into().expect("checked slice");
             let l_value: [u8; 32] = slice[33..65].try_into().expect("checked slice");
@@ -260,6 +268,7 @@ pub fn slice_to_branch_node(slice: &[u8]) -> BranchNode {
                 },
             }
         }
+        #[cfg(feature = "trie")]
         7 => {
             let base_node: [u8; 32] = slice[1..33].try_into().expect("checked slice");
             let zero_bits: [u8; 32] = slice[33..65].try_into().expect("checked slice");
@@ -280,6 +289,7 @@ pub fn slice_to_branch_node(slice: &[u8]) -> BranchNode {
                 },
             }
         }
+        #[cfg(feature = "trie")]
         8 => {
             let key: [u8; 32] = slice[1..33].try_into().expect("checked slice");
             let value: [u8; 32] = slice[33..65].try_into().expect("checked slice");

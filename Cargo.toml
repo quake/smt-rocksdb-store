@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 rocksdb = { package = "ckb-rocksdb", version = "0.18", default-features = false, features = ["snappy", "march-native"] }
-sparse-merkle-tree = { git = "https://github.com/nervosnetwork/sparse-merkle-tree", features = ["trie"] }
+sparse-merkle-tree = { git = "https://github.com/nervosnetwork/sparse-merkle-tree" }
+
+[features]
+default = []
+trie = ["sparse-merkle-tree/trie"]
 
 [dev-dependencies]
 # for benchmarks
