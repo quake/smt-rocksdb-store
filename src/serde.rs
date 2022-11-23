@@ -5,8 +5,8 @@ use sparse_merkle_tree::{merge::MergeValue, BranchKey, BranchNode};
 /// Serialize a `BranchKey` into a `Vec<u8>` for use as a key in the key-value store.
 pub fn branch_key_to_vec(key: &BranchKey) -> Vec<u8> {
     let mut ret = Vec::with_capacity(33);
-    ret.extend_from_slice(key.node_key.as_slice());
     ret.extend_from_slice(&[key.height]);
+    ret.extend_from_slice(key.node_key.as_slice());
     ret
 }
 
