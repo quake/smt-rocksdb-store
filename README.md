@@ -87,3 +87,17 @@ echo '{
 | curl -H 'content-type: application/json' -d @- \
 http://localhost:10000
 ```
+
+call rpc server to clear a tree:
+```
+echo '{
+    "id": 2,
+    "jsonrpc": "2.0",
+    "method": "clear",
+    "params": [
+        "tree1"
+    ]
+}' \
+| curl -H 'content-type: application/json' -d @- \
+http://localhost:10000
+```

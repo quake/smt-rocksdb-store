@@ -5,7 +5,11 @@ use jsonrpsee::core::{async_trait, Error};
 use jsonrpsee::http_server::HttpServerBuilder;
 use jsonrpsee::proc_macros::rpc;
 
-use rocksdb::{prelude::Open, DBVector, OptimisticTransactionDB};
+use rocksdb::{
+    prelude::{Iterate, Open},
+    DBVector, OptimisticTransactionDB,
+};
+use rocksdb::{Direction, IteratorMode};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smt_rocksdb_store::default_store::DefaultStoreMultiTree;
@@ -61,6 +65,9 @@ pub trait Rpc {
 
     #[method(name = "merkle_proof")]
     async fn merkle_proof(&self, tree: &str, keys: Vec<SmtKey>) -> Result<SmtProof, Error>;
+
+    #[method(name = "clear")]
+    async fn clear(&self, tree: &str) -> Result<(), Error>;
 }
 
 pub struct RpcServerImpl {
@@ -98,6 +105,35 @@ impl RpcServer for RpcServerImpl {
             .merkle_proof(keys.clone())
             .expect("merkle_proof error");
         Ok(SmtProof(proof.compile(keys).expect("compile error").0))
+    }
+
+    async fn clear(&self, tree: &str) -> Result<(), Error> {
+        // OptimisticTransactionDB does not support delete_range, so we have to iterate all keys and update them to zero as a workaround
+        let snapshot = self.db.snapshot();
+        let prefix = tree.as_bytes();
+        let prefix_len = prefix.len();
+        let leaf_key_len = prefix_len + 32;
+        let kvs: Vec<(H256, SmtValue)> = snapshot
+            .iterator(IteratorMode::From(prefix, Direction::Forward))
+            .take_while(|(k, _)| k.starts_with(prefix))
+            .filter_map(|(k, _)| {
+                if k.len() != leaf_key_len {
+                    None
+                } else {
+                    let leaf_key: [u8; 32] = k[prefix_len..].try_into().expect("checked 32 bytes");
+                    Some((leaf_key.into(), SmtValue::zero()))
+                }
+            })
+            .collect();
+
+        let tx = self.db.transaction_default();
+        let mut rocksdb_store_smt =
+            DefaultStoreMultiSMT::new_with_store(DefaultStoreMultiTree::new(tree.as_bytes(), &tx))
+                .unwrap();
+        rocksdb_store_smt.update_all(kvs).expect("update_all error");
+        tx.commit().expect("db commit error");
+        assert_eq!(rocksdb_store_smt.root(), &H256::zero());
+        Ok(())
     }
 }
 
