@@ -67,7 +67,7 @@ where
 
     fn insert_leaf(&mut self, leaf_key: H256, leaf: V) -> Result<(), Error> {
         self.inner
-            .put_cf(self.branch_col, leaf_key.as_slice(), leaf)
+            .put_cf(self.leaf_col, leaf_key.as_slice(), leaf)
             .map_err(|e| Error::Store(e.to_string()))
     }
 
@@ -79,7 +79,7 @@ where
 
     fn remove_leaf(&mut self, leaf_key: &H256) -> Result<(), Error> {
         self.inner
-            .delete_cf(self.branch_col, leaf_key.as_slice())
+            .delete_cf(self.leaf_col, leaf_key.as_slice())
             .map_err(|e| Error::Store(e.to_string()))
     }
 }
@@ -154,7 +154,7 @@ where
     fn insert_leaf(&mut self, leaf_key: H256, leaf: V) -> Result<(), Error> {
         self.inner
             .put_cf(
-                self.branch_col,
+                self.leaf_col,
                 &[self.prefix, leaf_key.as_slice()].concat(),
                 leaf,
             )
@@ -173,7 +173,7 @@ where
     fn remove_leaf(&mut self, leaf_key: &H256) -> Result<(), Error> {
         self.inner
             .delete_cf(
-                self.branch_col,
+                self.leaf_col,
                 &[self.prefix, leaf_key.as_slice()].concat(),
             )
             .map_err(|e| Error::Store(e.to_string()))

@@ -168,3 +168,54 @@ fn test_multi_trees_store_functions() {
         assert_ne!(root_tree1, root_tree2);
     };
 }
+
+#[test]
+fn test_rw_function() {
+    let kvs = "The quick brown fox jumps over the lazy dog"
+        .split_whitespace()
+        .enumerate()
+        .map(|(i, word)| {
+            let mut buf = [0u8; 32];
+            let mut hasher = new_blake2b();
+            hasher.update(&(i as u32).to_le_bytes());
+            hasher.finalize(&mut buf);
+            (buf.into(), Word(word.to_string()))
+        })
+        .collect::<Vec<(H256, Word)>>();
+
+    let tmp_dir = tempfile::Builder::new().tempdir().unwrap();
+    let mut options = Options::default();
+    options.create_if_missing(true);
+    options.create_missing_column_families(true);
+    let db = DB::open_cf(&options, tmp_dir.path(), vec!["cf1", "cf2"]).unwrap();
+    let branch_col = db.cf_handle("cf1").unwrap();
+    let leaf_col = db.cf_handle("cf2").unwrap();
+
+    let rocksdb_store1 = ColumnFamilyStoreMultiTree::new(b"tree1", &db, &branch_col, &leaf_col);
+    let rocksdb_store2 = ColumnFamilyStoreMultiTree::new(b"tree2", &db, &branch_col, &leaf_col);
+    let mut smt1 = ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store1).unwrap();
+    let mut smt2 = ColumnFamilyStoreMultiSMT::new_with_store(rocksdb_store2).unwrap();
+    for (key, value) in kvs.iter() {
+        smt1.update(key.clone(), value.clone()).unwrap();
+    }
+    smt2.update(kvs.first().unwrap().0.clone(), Word::default())
+        .unwrap();
+
+    let root1 = smt1.root().clone();
+    let root2 = smt2.root().clone();
+    let snapshot = db.snapshot();
+    let recovered_smt1 = ColumnFamilyStoreMultiSMT::new(
+        root1.clone(),
+        ColumnFamilyStoreMultiTree::<_, ()>::new(b"tree1", &snapshot, &branch_col, &leaf_col),
+    );
+    let recovered_smt2 = ColumnFamilyStoreMultiSMT::new(
+        root2.clone(),
+        ColumnFamilyStoreMultiTree::<_, ()>::new(b"tree2", &snapshot, &branch_col, &leaf_col),
+    );
+    
+    let leaf_value1 = recovered_smt1.get(&kvs[0].0).unwrap();
+    assert_eq!(leaf_value1.0, kvs[0].1.clone().0);
+
+    let leaf_value2 = recovered_smt2.get(&kvs[0].0).unwrap();
+    assert_eq!(leaf_value2.0, "".to_string());
+}
